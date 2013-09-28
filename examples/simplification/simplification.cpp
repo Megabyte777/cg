@@ -92,22 +92,6 @@ struct simplification_viewer : cg::visualization::viewer_adapter
         return true;
     }
 
-    bool on_release(const point_2f & p)
-    {
-        if (in_building)
-            return true;
-
-        return true;
-    }
-
-    bool on_move(const point_2f & p)
-    {
-        if (in_building)
-            return true;
-
-        return true;
-    }
-
 private:
     bool in_building;
     double eps;

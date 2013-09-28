@@ -3,6 +3,7 @@
 #include <cg/primitives/segment.h>
 #include <algorithm>
 #include <boost/next_prior.hpp>
+#include <cg/convex_hull/quick_hull.h>
 
 namespace cg
 {
@@ -19,9 +20,7 @@ namespace cg
         BidIter max = std::max_element(second, last,
                                         [&a, &b] (point const &x, point const &y)
                                         {
-                                            double l = fabs((b.x - a.x) * (x.y - a.y) - (x.x - a.x) * (b.y - a.y));
-                                            double r = fabs((b.x - a.x) * (y.y - a.y) - (y.x - a.x) * (b.y - a.y));
-                                            return l < r;
+                                            return pred(a, b, x, y) == CG_RIGHT;
                                         }
                                       );
         point c = *max;
