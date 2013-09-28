@@ -6,17 +6,17 @@
 
 namespace cg
 {
-    template <typename ForvardIter, typename OutIter>
-    OutIter douglas_peucker(ForvardIter begin, ForvardIter end, double eps, OutIter out)
+    template <typename BidIter, typename OutIter>
+    OutIter douglas_peucker(BidIter begin, BidIter end, double eps, OutIter out)
     {
         if (end - begin <= 2)
             return std::copy(begin, end, out);
-        typedef typename std::iterator_traits<ForvardIter>::value_type point;
-        ForvardIter second = boost::next(begin);
-        ForvardIter last = boost::prior(end);
+        typedef typename std::iterator_traits<BidIter>::value_type point;
+        BidIter second = boost::next(begin);
+        BidIter last = boost::prior(end);
         point a = *begin;
         point b = *last;
-        ForvardIter max = std::max_element(second, last,
+        BidIter max = std::max_element(second, last,
                                         [&a, &b] (point const &x, point const &y)
                                         {
                                             double l = fabs((b.x - a.x) * (x.y - a.y) - (x.x - a.x) * (b.y - a.y));
