@@ -12,9 +12,9 @@ using cg::point_2;
 using cg::point_2f;
 using cg::vector_2f;
 
-struct simplification_viewer : cg::visualization::viewer_adapter
+struct diameter_viewer : cg::visualization::viewer_adapter
 {
-    simplification_viewer()
+    diameter_viewer()
     {
         in_building = true;
     }
@@ -77,12 +77,11 @@ private:
     bool in_building;
     point_2 a, b;
     std::vector<point_2> points_;
-    std::vector<point_2> simplified_points_;
 };
 
 int main(int argc, char ** argv)
 {
    QApplication app(argc, argv);
-   simplification_viewer viewer;
-   cg::visualization::run_viewer(&viewer, "simplification viewer");
+   diameter_viewer viewer;
+   cg::visualization::run_viewer(&viewer, "diameter viewer");
 }
