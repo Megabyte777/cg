@@ -7,6 +7,24 @@
 
 namespace cg
 {
+    template <typename Scalar>
+    double distance(segment_2t<Scalar> s, point_2t<Scalar> p)
+    {
+        double projection =   ((s[1].x - s[0].x) * (p.x - s[0].x)
+                            +  (s[1].y - s[0].y) * (p.y - s[0].y))
+                            / s.length();
+        double distance;
+        if (projection >= 0 && projection <= s.length())
+            distance = fabs((s[1].x - s[0].x) * (p.y - s[0].y)
+                            - (p.x - s[0].x) * (s[1].y - s[0].y))
+                        / s.length() / 2;
+        else if (projection > 0 )
+            distance = segment_2t<Scalar>(s[1], p).length();
+        else
+            distance = segment_2t<Scalar>(s[0], p).length();
+        return distance;
+    }
+
     template <typename BidIter, typename OutIter>
     OutIter douglas_peucker(BidIter begin, BidIter end, double eps, OutIter out)
     {
@@ -20,23 +38,13 @@ namespace cg
         BidIter max = std::max_element(second, last,
                                         [&a, &b] (point const &x, point const &y)
                                         {
-                                            return pred(a, b, x, y) == CG_RIGHT;
+                                            return distance(segment_2t<double>(a, b), x) <
+                                                   distance(segment_2t<double>(a, b), y);
                                         }
                                       );
         point c = *max;
-        /*computation of distance*/
-        double projection = ((b.x - a.x) * (c.x - a.x) + (b.y - a.y) * (c.y - a.y)) /
-                    segment_2t<double>(a, b).length();
-        double distance;
-        if (projection >= 0 && projection <= segment_2t<double>(a, b).length())
-            distance = fabs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) /
-                segment_2t<double>(a, b).length() / 2;
-        else if (projection > 0 )
-            distance = segment_2t<double>(b, c).length();
-        else
-            distance = segment_2t<double>(a, c).length();
-        /*end of computation of distance*/
-        if (distance < eps)
+        double dist = distance(segment_2t<double>(a, b), c);
+        if (dist < eps)
         {
             *out++ = a;
             *out++ = b;
