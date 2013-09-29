@@ -31,6 +31,8 @@ struct simplification_viewer : cg::visualization::viewer_adapter
             drawer.set_color(Qt::white);
         else
             drawer.set_color(Qt::green);
+        for (point_2 p : points_)
+            drawer.draw_point(p, 5);
         std::vector<point_2> const &points = in_building ? points_ : simplified_points_;
         for (size_t i = 1; i < points.size(); ++i)
             drawer.draw_line(points[i - 1], points[i]);
