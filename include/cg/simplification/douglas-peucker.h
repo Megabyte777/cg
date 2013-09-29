@@ -3,7 +3,6 @@
 #include <cg/primitives/segment.h>
 #include <algorithm>
 #include <boost/next_prior.hpp>
-#include <cg/convex_hull/quick_hull.h>
 
 namespace cg
 {
