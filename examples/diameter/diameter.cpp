@@ -36,9 +36,6 @@ struct diameter_viewer : cg::visualization::viewer_adapter
     {
         p.corner_stream() << "click mouse rbutton to add vertex" << cg::visualization::endl
                             << "double-click to clear" << cg::visualization::endl;
-
-        for (size_t i = 0; i < points_.size(); ++i)
-            p.global_stream((point_2f)points_[i] + vector_2f(5, 0)) << i;
    }
 
     bool on_double_click(const point_2f & p)
