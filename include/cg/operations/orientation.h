@@ -41,6 +41,22 @@ namespace cg
 
          return boost::none;
       }
+
+      boost::optional<orientation_t> operator() (point_2 const & a, point_2 const & b, point_2 const & c, point_2 const & d) const
+      {
+         double l = (b.x - a.x) * (d.y - c.y);
+         double r = (b.y - a.y) * (d.x - c.x);
+         double res = l - r;
+         double eps = (fabs(l) + fabs(r)) * 8 * std::numeric_limits<double>::epsilon();
+
+         if (res > eps)
+            return CG_LEFT;
+
+         if (res < -eps)
+            return CG_RIGHT;
+
+         return boost::none;
+      }
    };
 
    struct orientation_i
@@ -52,6 +68,26 @@ namespace cg
          boost::numeric::interval<double>::traits_type::rounding _;
          interval res =   (interval(b.x) - a.x) * (interval(c.y) - a.y)
                         - (interval(b.y) - a.y) * (interval(c.x) - a.x);
+
+         if (res.lower() > 0)
+            return CG_LEFT;
+
+         if (res.upper() < 0)
+            return CG_RIGHT;
+
+         if (res.upper() == res.lower())
+            return CG_COLLINEAR;
+
+         return boost::none;
+      }
+
+      boost::optional<orientation_t> operator() (point_2 const & a, point_2 const & b, point_2 const & c, point_2 const & d) const
+      {
+         typedef boost::numeric::interval_lib::unprotect<boost::numeric::interval<double> >::type interval;
+
+         boost::numeric::interval<double>::traits_type::rounding _;
+         interval res =   (interval(b.x) - a.x) * (interval(d.y) - c.y)
+                        - (interval(b.y) - a.y) * (interval(d.x) - c.x);
 
          if (res.lower() > 0)
             return CG_LEFT;
@@ -83,6 +119,22 @@ namespace cg
 
          return CG_COLLINEAR;
       }
+
+      boost::optional<orientation_t> operator() (point_2 const & a, point_2 const & b, point_2 const & c, point_2 const & d) const
+      {
+         mpq_class res =   (mpq_class(b.x) - a.x) * (mpq_class(d.y) - c.y)
+                         - (mpq_class(b.y) - a.y) * (mpq_class(d.x) - c.x);
+
+         int cres = cmp(res, 0);
+
+         if (cres > 0)
+            return CG_LEFT;
+
+         if (cres < 0)
+            return CG_RIGHT;
+
+         return CG_COLLINEAR;
+      }
    };
 
    inline orientation_t orientation(point_2 const & a, point_2 const & b, point_2 const & c)
@@ -94,6 +146,17 @@ namespace cg
          return *v;
 
       return *orientation_r()(a, b, c);
+   }
+
+   inline orientation_t orientation(point_2 const & a, point_2 const & b, point_2 const & c, point_2 const & d)
+   {
+      if (boost::optional<orientation_t> v = orientation_d()(a, b, c, d))
+         return *v;
+
+      if (boost::optional<orientation_t> v = orientation_i()(a, b, c, d))
+         return *v;
+
+      return *orientation_r()(a, b, c, d);
    }
 
    inline bool counterclockwise(contour_2 const & c)

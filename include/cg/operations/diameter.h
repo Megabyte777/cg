@@ -35,7 +35,7 @@ namespace cg
         auto less = [] (point const &a, point const &b,
                               point const &c, point const &d)
         {
-            return pred(a, b, c, d) == CG_RIGHT;
+            return orientation(a, b, c, d) == CG_LEFT;
         };
         do
         {

@@ -37,6 +37,13 @@ namespace cg
          y += delta.y;
          return *this;
       }
+
+      point_2t<Scalar> & operator -= (vector_2t<Scalar> const & delta)
+      {
+         x -= delta.x;
+         y -= delta.y;
+         return *this;
+      }
    };
 
    template <class Scalar>
@@ -92,6 +99,14 @@ namespace cg
    {
       point_2t<Scalar> res(pt);
       res += delta;
+      return res;
+   }
+
+   template <class Scalar>
+   point_2t<Scalar> const operator - (point_2t<Scalar> const & pt, vector_2t<Scalar> const & delta)
+   {
+      point_2t<Scalar> res(pt);
+      res -= delta;
       return res;
    }
 }

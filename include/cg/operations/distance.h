@@ -71,6 +71,6 @@ namespace cg
         if (boost::optional<bool> v = cmp_dist_i()(a, b, c, d))
             return *v;
 
-       return *pred_r()(a, b, c, d);
+       return *cmp_dist_r()(a, b, c, d);
     }
 }
