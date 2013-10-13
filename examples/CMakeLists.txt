@@ -6,3 +6,5 @@ add_subdirectory(convex)
 add_subdirectory(simplification)
 add_subdirectory(diameter)
 add_subdirectory(visibility)
+add_subdirectory(navigation)
+
