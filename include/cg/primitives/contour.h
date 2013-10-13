@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "point.h"
+#include "segment.h"
 #include "cg/common/range.h"
 
 namespace cg
@@ -30,6 +31,20 @@ namespace cg
       const_iterator end() const
       {
          return pts_.end();
+      }
+
+      const_iterator rbegin() const
+      {
+         return pts_.rbegin();
+      }
+      const_iterator rend() const
+      {
+         return pts_.rend();
+      }
+
+      void reverse()
+      {
+          std::reverse(pts_.begin(), pts_.end());
       }
 
       circulator_t circulator() const
