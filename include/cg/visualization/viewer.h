@@ -4,6 +4,7 @@
 
 #include "cg/primitives/point.h"
 #include "cg/primitives/segment.h"
+#include "cg/primitives/circle.h"
 
 namespace cg {
 namespace visualization
@@ -34,10 +35,12 @@ namespace visualization
 
    struct drawer_type
    {
-      virtual void set_color  (QColor const &)                                       = 0;
-      virtual void draw_line  (segment_2f const &,                 float width  = 1) = 0;
-      virtual void draw_line  (point_2f const &, point_2f const &, float width  = 1) = 0;
-      virtual void draw_point (point_2f const &,                   float radius = 1) = 0;
+      virtual void set_color   (QColor const &)                                         = 0;
+      virtual void draw_line   (segment_2f const &,                   float width  = 1) = 0;
+      virtual void draw_line   (point_2f const &, point_2f const &,   float width  = 1) = 0;
+      virtual void draw_point  (point_2f const &,                     float radius = 1) = 0;
+      virtual void draw_circle (point_2f const &center, float radius, float width = 1)  = 0;
+      virtual void draw_circle (circle_2f const &,                    float width  = 1) = 0;
 
       virtual ~drawer_type() {}
    };

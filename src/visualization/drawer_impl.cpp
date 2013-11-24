@@ -47,4 +47,28 @@ namespace visualization
       colors_buffer.push_back(current_color_.greenF());
       colors_buffer.push_back(current_color_.blueF());
    }
+
+   void drawer_impl::draw_circle(point_2f const &center, float radius, float width)
+   {
+        static const int POINTS_COUNT = 25;
+        static const double PI = 3.14159265358979;
+        double phi = 0;
+        point_2f prev_p = center + vector_2f(radius, 0);
+        point_2f p;
+        for (int i = 1; i < POINTS_COUNT; i++)
+        {
+            phi += 2 * PI / POINTS_COUNT;
+            p = center + radius * vector_2f(cos(phi), sin(phi));
+            draw_line(prev_p, p, width);
+            prev_p = p;
+        }
+        p = center + vector_2f(radius, 0);
+        draw_line(prev_p, p, width);
+   }
+
+   void drawer_impl::draw_circle(circle_2f const &c, float width)
+   {
+       draw_circle(c.center, c.radius, width);
+   }
+
 }}
