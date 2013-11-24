@@ -61,9 +61,14 @@ struct delaunay_triangulation_viewer : cg::visualization::viewer_adapter
 
     void draw(cg::visualization::drawer_type & drawer) const
     {
-        drawer.set_color(Qt::white);
         for (point_2 p : points)
+        {
+            if (cur_vertex && p == *cur_vertex)
+                drawer.set_color(Qt::red);
+            else
+                drawer.set_color(Qt::white);
             drawer.draw_point(p, 5);
+        }
         for (triangle_2 t : triangles)
         {
             drawer.set_color(Qt::green);
@@ -78,14 +83,25 @@ struct delaunay_triangulation_viewer : cg::visualization::viewer_adapter
     void print(cg::visualization::printer_type & p) const
     {
         p.corner_stream() << "press mouse rbutton to add vertex" << cg::visualization::endl
-                            << "double-click to clear" << cg::visualization::endl;
+                          << "double-click on vertex to remove" << cg::visualization::endl
+                          << "double-click anywhere but vertices to clear" << cg::visualization::endl;
     }
 
     bool on_double_click(const point_2f & p)
     {
-        points.clear();
-        triangles.clear();
-        triang.clear();
+        if (cur_vertex)
+        {
+            triang.remove_point(*cur_vertex);
+            points.erase(remove(points.begin(), points.end(), *cur_vertex), points.end());
+            triangles = triang.get_triangles();
+            check_cur_vertex();
+        }
+        else
+        {
+            points.clear();
+            triangles.clear();
+            triang.clear();
+        }
         return true;
     }
 
@@ -94,12 +110,27 @@ struct delaunay_triangulation_viewer : cg::visualization::viewer_adapter
         points.push_back(p);
         triang.add_point(p);
         triangles = triang.get_triangles();
+        cur_vertex = p;
         return true;
+    }
+
+    void check_cur_vertex()
+    {
+        for (size_t i = 0; i < points.size(); ++i)
+        {
+            if (fabs(points[i].x - cur_point.x) < 15 && fabs(points[i].y - cur_point.y) < 15)
+            {
+                cur_vertex = points[i];
+                return;
+            }
+        }
+        cur_vertex.reset();
     }
 
     bool on_move(const point_2f & p)
     {
         cur_point = p;
+        check_cur_vertex();
         return true;
     }
 
@@ -107,7 +138,8 @@ private:
     std::vector<point_2> points;
     std::vector<triangle_2> triangles;
     triangulation<double> triang;
-    point_2f cur_point;
+    point_2 cur_point;
+    boost::optional<point_2> cur_vertex;
 };
 
 int main(int argc, char ** argv)

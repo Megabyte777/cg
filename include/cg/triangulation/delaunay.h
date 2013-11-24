@@ -248,17 +248,22 @@ namespace cg
                 faces[faces.size() - i - 1]->check_criterion();
         }
 
-    public:
-        void clear()
+        void reset_ptrs()
         {
             for (std::shared_ptr<node> np : nodes)
                 np.reset();
-            nodes.clear();
             for (std::shared_ptr<edge> ep : edges)
                 ep.reset();
-            edges.clear();
             for (std::shared_ptr<face> fp : faces)
                 fp.reset();
+        }
+
+    public:
+        void clear()
+        {
+            reset_ptrs();
+            nodes.clear();
+            edges.clear();
             faces.clear();
         }
 
@@ -287,6 +292,69 @@ namespace cg
             insert_node_into_face(np, fp);
         }
 
+        void remove_point(point_2t<Scalar> const &p)
+        {
+            auto npi = std::find_if(nodes.begin(), nodes.end(),
+                                    [p] (std::shared_ptr<node> np)
+                                    {
+                                        return !np->infinite && np->geometry() == p;
+                                    });
+            if (npi == nodes.end())
+                return;
+            std::shared_ptr<node> np = *npi;
+            *npi = nodes.back();
+            nodes.pop_back();
+            if (nodes.size() < 3)
+            {
+                if (nodes.size() == 2)
+                {
+                    node *n = 0;
+                    if (!nodes[0]->infinite)
+                        n = new node(nodes[0]->p);
+                    else
+                        n = new node(nodes[1]->p);
+                    clear();
+                    nodes.push_back(std::shared_ptr<node>(n));
+                }
+                return;
+            }
+            std::vector<std::shared_ptr<edge> > edges_;
+            for (std::shared_ptr<edge> ep : edges)
+                if (ep->a == np)
+                    edges_.push_back(ep);
+            assert(edges_.size() > 2);
+            for (int i = 0; i < edges_.size() - 3; ++i)
+                edges_[i]->flip();
+            std::shared_ptr<edge> ep;
+            if (edges_.size() > 3)
+                ep = edges_[edges_.size() - 4];
+            else
+                ep = edges_[0]->next;
+            auto ep1 = ep->next->twin->next;
+            auto ep2 = ep->next->next->twin->next->next;
+            faces.erase(std::remove_if(faces.begin(), faces.end(),
+                                        [ep1, ep2] (std::shared_ptr<face> fp) { return fp == ep1->f || fp == ep2->f; }),
+                        faces.end());
+            ep->next = ep1;
+            ep1->next = ep2;
+            ep2->next = ep;
+            ep1->f = ep->f;
+            ep2->f = ep->f;
+            ep->f->e = ep;
+            edges.erase(std::remove_if(edges.begin(), edges.end(),
+                                        [np] (std::shared_ptr<edge> ep) { return ep->a == np || ep->b == np; }),
+                        edges.end());
+            for (int i = 3; i < edges_.size(); ++i)
+            {
+                auto ep = *(edges_.rbegin() + i);
+                ep->flip();
+                if (!ep->infinite() && !ep->is_left(ep->next->b))
+                    ep->flip();
+            }
+            for (int i = 0; i < edges_.size() - 3; ++i)
+                edges_[i]->f->check_criterion();
+        }
+
         std::vector<triangle_2t<Scalar> > get_triangles() const
         {
             std::vector<triangle_2t<Scalar> > res;
@@ -298,7 +366,7 @@ namespace cg
 
         ~triangulation()
         {
-            clear();
+            reset_ptrs();
         }
     };
 
