@@ -20,6 +20,7 @@ set(SOURCES
    dynamic_convex_hull.cpp
    convex.cpp
    diameter.cpp
+   delaunay_triangulation.cpp
 )
 
 add_executable(cg-test ${SOURCES})
