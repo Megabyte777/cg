@@ -33,19 +33,25 @@ namespace cg
 
         struct edge
         {
-            std::shared_ptr<node> a, b;
-            std::shared_ptr<edge> twin;
-            std::shared_ptr<edge> next;
-            std::shared_ptr<face> f;
+            std::weak_ptr<node> a_, b_;
+            std::weak_ptr<edge> twin_;
+            std::weak_ptr<edge> next_;
+            std::weak_ptr<face> f_;
+
+            std::shared_ptr<node> a() const { return a_.lock(); }
+            std::shared_ptr<node> b() const { return b_.lock(); }
+            std::shared_ptr<edge> twin() const { return twin_.lock(); }
+            std::shared_ptr<edge> next() const { return next_.lock(); }
+            std::shared_ptr<face> f() const { return f_.lock(); }
 
             segment_2t<Scalar> geometry() const
             {
-                return segment_2t<Scalar>(a->geometry(), b->geometry());
+                return segment_2t<Scalar>(a()->geometry(), b()->geometry());
             }
 
             bool is_left(std::shared_ptr<node> np) const
             {
-                assert(!a->infinite && !b->infinite);
+                assert(!a()->infinite && !b()->infinite);
                 if (np->infinite)
                     return false;
                 segment_2t<Scalar> seg = geometry();
@@ -55,121 +61,110 @@ namespace cg
 
             bool infinite() const
             {
-                return a->infinite || b->infinite;
+                return a()->infinite || b()->infinite;
             }
 
             void flip()
             {
-                auto a = this->a;
-                auto b = this->b;
-                auto c = next->b;
-                auto d = twin->next->b;
-                auto ab = twin->twin;
-                auto bc = ab->next;
-                auto ca = bc->next;
-                auto ba = twin;
-                auto ad = ba->next;
-                auto db = ad->next;
-                ab->a = d;
-                ab->b = c;
-                ab->next = ca;
-                ca->next = ad;
-                ad->next = ab;
-                ad->f = ab->f;
-                ba->a = c;
-                ba->b = d;
-                ba->next = db;
-                db->next = bc;
-                bc->next = ba;
-                bc->f = ba->f;
-                ab->f->e = ab;
-                ba->f->e = ba;
+                std::shared_ptr<node> c = next()->b();
+                std::shared_ptr<node> d = twin()->next()->b();
+                std::shared_ptr<edge> ab = twin()->twin();
+                std::shared_ptr<edge> bc = ab->next();
+                std::shared_ptr<edge> ca = bc->next();
+                std::shared_ptr<edge> ba = twin();
+                std::shared_ptr<edge> ad = ba->next();
+                std::shared_ptr<edge> db = ad->next();
+                ab->a_ = d;
+                ab->b_ = c;
+                ab->next_ = ca;
+                ca->next_ = ad;
+                ad->next_ = ab;
+                ad->f_ = ab->f();
+                ba->a_ = c;
+                ba->b_ = d;
+                ba->next_ = db;
+                db->next_ = bc;
+                bc->next_ = ba;
+                bc->f_ = ba->f();
+                ab->f()->e_ = ab;
+                ba->f()->e_ = ba;
             }
 
             bool bad() const
             {
-                if (twin->next->b->infinite)
+                if (twin()->next()->b()->infinite)
                     return false;
-                if (f->infinite())
+                if (f()->infinite())
                 {
                     if (!infinite())
                         return false;
-                    auto ep = twin->twin;
+                    auto ep = twin()->twin();
                     while (ep->infinite())
-                        ep = ep->next;
-                    return ep->is_left(twin->next->b);
+                        ep = ep->next();
+                    return ep->is_left(twin()->next()->b());
                 }
                 else
                 {
-                    triangle_2t<Scalar> tr = f->geometry();
-                    return !delaunay_criterion(tr[0], tr[1], tr[2], twin->next->b->geometry());
+                    triangle_2t<Scalar> tr = f()->geometry();
+                    return !delaunay_criterion(tr[0], tr[1], tr[2], twin()->next()->b()->geometry());
+                }
+            }
+
+            void check_criterion()
+            {
+                if (bad())
+                {
+                    flip();
+                    next()->check_criterion();
+                    next()->next()->check_criterion();
+                    twin()->next()->check_criterion();
+                    twin()->next()->next()->check_criterion();
                 }
             }
         };
 
         struct face
         {
-            std::shared_ptr<edge> e;
+            std::weak_ptr<edge> e_;
+
+            std::shared_ptr<edge> e() const { return e_.lock(); }
 
             triangle_2t<Scalar> geometry() const
             {
-                return triangle_2t<Scalar>(e->a->geometry(),
-                                           e->b->geometry(),
-                                           e->next->b->geometry());
+                return triangle_2t<Scalar>(e()->a()->geometry(),
+                                           e()->b()->geometry(),
+                                           e()->next()->b()->geometry());
             }
 
             bool contains(std::shared_ptr<node> np) const
             {
                 if (infinite())
                 {
-                    auto ep = e;
+                    auto ep = e();
                     while (ep->infinite())
-                        ep = ep->next;
+                        ep = ep->next();
                     return ep->is_left(np);
                 }
-                auto ep = e;
+                auto ep = e();
                 for (int i = 0; i < 3; ++i)
                 {
                     if (!ep->is_left(np))
                         return false;
-                    ep = ep->next;
+                    ep = ep->next();
                 }
                 return true;
             }
 
             bool infinite() const
             {
-                auto ep = e;
+                auto ep = e();
                 for (int i = 0; i < 3; ++i)
                 {
-                    if (ep->a->infinite)
+                    if (ep->a()->infinite)
                         return true;
-                    ep = ep->next;
+                    ep = ep->next();
                 }
                 return false;
-            }
-
-            void check_criterion()
-            {
-                auto ep = e;
-                for (int i = 0; i < 3; ++i)
-                {
-                    if (ep->bad())
-                    {
-                        ep->flip();
-                        if (auto ep1 = ep->next->twin)
-                            ep1->f->check_criterion();
-                        if (auto ep1 = ep->next->next->twin)
-                            ep1->f->check_criterion();
-                        if (auto ep1 = ep->twin->next->twin)
-                            ep1->f->check_criterion();
-                        if (ep->twin)
-                            if (auto ep1 = ep->twin->next->next->twin)
-                                ep1->f->check_criterion();
-                        break;
-                    }
-                    ep = ep->next;
-                }
             }
         };
 
@@ -189,49 +184,49 @@ namespace cg
                 faces.push_back(std::shared_ptr<face>(new face()));
             for (int i = 0; i < 3; ++i)
             {
-                edges[i]->a = nodes[i];
-                edges[i]->b = nodes[(i + 1) % 3];
-                edges[i]->next = edges[(i + 1) % 3];
-                edges[i]->f = faces[0];
+                edges[i]->a_ = nodes[i];
+                edges[i]->b_ = nodes[(i + 1) % 3];
+                edges[i]->next_ = edges[(i + 1) % 3];
+                edges[i]->f_ = faces[0];
 
-                edges[3 + i]->a = *(nodes.rbegin() + i);
-                edges[3 + i]->b = *(nodes.rbegin() + (i + 1) % 3);
-                edges[3 + i]->next = edges[3 + (i + 1) % 3];
-                edges[3 + i]->f = faces[1];
+                edges[3 + i]->a_ = *(nodes.rbegin() + i);
+                edges[3 + i]->b_ = *(nodes.rbegin() + (i + 1) % 3);
+                edges[3 + i]->next_ = edges[3 + (i + 1) % 3];
+                edges[3 + i]->f_ = faces[1];
             }
-            edges[0]->twin = edges[4];
-            edges[4]->twin = edges[0];
-            edges[1]->twin = edges[3];
-            edges[3]->twin = edges[1];
-            edges[2]->twin = edges[5];
-            edges[5]->twin = edges[2];
-            faces[0]->e = edges[0];
-            faces[1]->e = edges[4];
+            edges[0]->twin_ = edges[4];
+            edges[4]->twin_ = edges[0];
+            edges[1]->twin_ = edges[3];
+            edges[3]->twin_ = edges[1];
+            edges[2]->twin_ = edges[5];
+            edges[5]->twin_ = edges[2];
+            faces[0]->e_ = edges[0];
+            faces[1]->e_ = edges[4];
         }
 
         void insert_node_into_face(std::shared_ptr<node> np, std::shared_ptr<face> fp)
         {
-            std::shared_ptr<edge> ep = fp->e;
+            std::shared_ptr<edge> ep = fp->e();
             for (int i = 0; i < 3; ++i)
             {
                 std::shared_ptr<face> nfp(new face());
-                ep->f = nfp;
+                ep->f_ = nfp;
                 std::shared_ptr<edge> nep1(new edge());
-                nep1->a = ep->b;
-                nep1->b = np;
-                nep1->f = nfp;
+                nep1->a_ = ep->b();
+                nep1->b_ = np;
+                nep1->f_ = nfp;
                 std::shared_ptr<edge> nep2(new edge());
-                nep2->a = np;
-                nep2->b = ep->a;
-                nep2->f = nfp;
-                std::shared_ptr<edge> nep = ep->next;
-                ep->next = nep1;
-                nep1->next = nep2;
-                nep2->next = ep;
+                nep2->a_ = np;
+                nep2->b_ = ep->a();
+                nep2->f_ = nfp;
+                std::shared_ptr<edge> nep = ep->next();
+                ep->next_ = nep1;
+                nep1->next_ = nep2;
+                nep2->next_ = ep;
 
                 edges.push_back(nep1);
                 edges.push_back(nep2);
-                nfp->e = ep;
+                nfp->e_ = ep;
                 faces.push_back(nfp);
                 ep = nep;
             }
@@ -239,29 +234,18 @@ namespace cg
             {
                 std::shared_ptr<face> fp1 = *(faces.rbegin() + (i + 1) % 3);
                 std::shared_ptr<face> fp2 = *(faces.rbegin() + i);
-                std::shared_ptr<edge> ep1 = fp1->e->next;
-                std::shared_ptr<edge> ep2 = fp2->e->next->next;
-                ep1->twin = ep2;
-                ep2->twin = ep1;
+                std::shared_ptr<edge> ep1 = fp1->e()->next();
+                std::shared_ptr<edge> ep2 = fp2->e()->next()->next();
+                ep1->twin_ = ep2;
+                ep2->twin_ = ep1;
             }
             for (int i = 0; i < 3; ++i)
-                faces[faces.size() - i - 1]->check_criterion();
-        }
-
-        void reset_ptrs()
-        {
-            for (std::shared_ptr<node> np : nodes)
-                np.reset();
-            for (std::shared_ptr<edge> ep : edges)
-                ep.reset();
-            for (std::shared_ptr<face> fp : faces)
-                fp.reset();
+                faces[faces.size() - i - 1]->e()->check_criterion();
         }
 
     public:
         void clear()
         {
-            reset_ptrs();
             nodes.clear();
             edges.clear();
             faces.clear();
@@ -320,7 +304,7 @@ namespace cg
             }
             std::vector<std::shared_ptr<edge> > edges_;
             for (std::shared_ptr<edge> ep : edges)
-                if (ep->a == np)
+                if (ep->a() == np)
                     edges_.push_back(ep);
             assert(edges_.size() > 2);
             for (int i = 0; i < edges_.size() - 3; ++i)
@@ -329,30 +313,30 @@ namespace cg
             if (edges_.size() > 3)
                 ep = edges_[edges_.size() - 4];
             else
-                ep = edges_[0]->next;
-            auto ep1 = ep->next->twin->next;
-            auto ep2 = ep->next->next->twin->next->next;
+                ep = edges_[0]->next();
+            auto ep1 = ep->next()->twin()->next();
+            auto ep2 = ep->next()->next()->twin()->next()->next();
             faces.erase(std::remove_if(faces.begin(), faces.end(),
-                                        [ep1, ep2] (std::shared_ptr<face> fp) { return fp == ep1->f || fp == ep2->f; }),
+                                        [ep1, ep2] (std::shared_ptr<face> fp) { return fp == ep1->f() || fp == ep2->f(); }),
                         faces.end());
-            ep->next = ep1;
-            ep1->next = ep2;
-            ep2->next = ep;
-            ep1->f = ep->f;
-            ep2->f = ep->f;
-            ep->f->e = ep;
+            ep->next_ = ep1;
+            ep1->next_ = ep2;
+            ep2->next_ = ep;
+            ep1->f_ = ep->f();
+            ep2->f_ = ep->f();
+            ep->f()->e_ = ep;
             edges.erase(std::remove_if(edges.begin(), edges.end(),
-                                        [np] (std::shared_ptr<edge> ep) { return ep->a == np || ep->b == np; }),
+                                        [np] (std::shared_ptr<edge> ep) { return ep->a() == np || ep->b() == np; }),
                         edges.end());
             for (int i = 3; i < edges_.size(); ++i)
             {
                 auto ep = *(edges_.rbegin() + i);
                 ep->flip();
-                if (!ep->infinite() && !ep->is_left(ep->next->b))
+                if (!ep->infinite() && !ep->is_left(ep->next()->b()))
                     ep->flip();
             }
             for (int i = 0; i < edges_.size() - 3; ++i)
-                edges_[i]->f->check_criterion();
+                edges_[i]->check_criterion();
         }
 
         std::vector<triangle_2t<Scalar> > get_triangles() const
@@ -362,11 +346,6 @@ namespace cg
                 if (!f->infinite())
                     res.push_back(f->geometry());
             return res;
-        }
-
-        ~triangulation()
-        {
-            reset_ptrs();
         }
     };
 
