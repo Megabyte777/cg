@@ -27,6 +27,12 @@ namespace cg
                 assert(!infinite);
                 return p;
             }
+
+            std::ostream & operator << (std::ostream & out)
+            {
+                out << "(" << p.x << ", " << p.y << ")";
+                return out;
+            }
         };
 
         struct face;
@@ -53,7 +59,7 @@ namespace cg
             {
                 assert(!a()->infinite && !b()->infinite);
                 if (np->infinite)
-                    return false;
+                    return true;
                 segment_2t<Scalar> seg = geometry();
                 orientation_t orient = orientation(seg[0], seg[1], np->geometry());
                 return (orient == CG_LEFT) || (orient == CG_COLLINEAR);
@@ -92,12 +98,12 @@ namespace cg
 
             bool bad() const
             {
+                if (!f()->infinite() && !is_left(next()->b()))
+                    return true;
                 if (twin()->next()->b()->infinite)
                     return false;
                 if (f()->infinite())
                 {
-                    if (!infinite())
-                        return false;
                     auto ep = twin()->twin();
                     while (ep->infinite())
                         ep = ep->next();
@@ -128,6 +134,12 @@ namespace cg
             std::weak_ptr<edge> e_;
 
             std::shared_ptr<edge> e() const { return e_.lock(); }
+
+            std::ostream & operator << (std::ostream & out)
+            {
+                out << *e()->a() << " " << *e()->b() << " " << *e()->next()->b();
+                return out;
+            }
 
             triangle_2t<Scalar> geometry() const
             {
@@ -331,10 +343,12 @@ namespace cg
             for (int i = 3; i < edges_.size(); ++i)
             {
                 auto ep = *(edges_.rbegin() + i);
-                ep->flip();
-                if (!ep->infinite() && !ep->is_left(ep->next()->b()))
+                if (ep->bad())
                     ep->flip();
             }
+            ep->check_criterion();
+            ep->next()->check_criterion();
+            ep->next()->next()->check_criterion();
             for (int i = 0; i < edges_.size() - 3; ++i)
                 edges_[i]->check_criterion();
         }
